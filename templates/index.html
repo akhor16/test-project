@@ -194,9 +194,11 @@
             results.forEach(result => {
                 const resultItem = document.createElement('div');
                 resultItem.className = 'result-item';
+                const inputStr = result.input ? result.input.join(', ') : 'N/A';
+                const outputStr = result.output ? result.output.join(', ') : 'N/A';
                 resultItem.innerHTML = `
-                    <div class="input-data">Input: [${result.input.join(', ')}]</div>
-                    <div class="output-data">Output: [${result.output.join(', ')}]</div>
+                    <div class="input-data">Input: [${inputStr}]</div>
+                    <div class="output-data">Output: [${outputStr}]</div>
                 `;
                 contentDiv.appendChild(resultItem);
             });
@@ -238,9 +240,10 @@
             const llmDiv = document.getElementById('llmResponse');
             const contentDiv = document.getElementById('llmContent');
             
+            const originalDataStr = originalData ? originalData.join(', ') : 'N/A';
             contentDiv.innerHTML = `
                 <div class="llm-response">
-                    <strong>Original Data:</strong> [${originalData.join(', ')}]<br>
+                    <strong>Original Data:</strong> [${originalDataStr}]<br>
                     <strong>LLM Sorted Result:</strong> ${response}
                 </div>
             `;
@@ -286,10 +289,14 @@
                     `;
                 }
                 
+                const inputStr = result.input ? result.input.join(', ') : 'N/A';
+                const outputStr = result.output ? result.output.join(', ') : 'N/A';
+                const timestamp = result.timestamp ? new Date(result.timestamp).toLocaleString() : 'N/A';
+                
                 historyItem.innerHTML = `
-                    <div><strong>Input:</strong> [${result.input.join(', ')}]</div>
-                    <div><strong>Output:</strong> [${result.output.join(', ')}]</div>
-                    <div style="font-size: 12px; color: #666;">${new Date(result.timestamp).toLocaleString()}</div>
+                    <div><strong>Input:</strong> [${inputStr}]</div>
+                    <div><strong>Output:</strong> [${outputStr}]</div>
+                    <div style="font-size: 12px; color: #666;">${timestamp}</div>
                     ${llmSection}
                 `;
                 contentDiv.appendChild(historyItem);
