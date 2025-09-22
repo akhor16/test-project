@@ -3,7 +3,8 @@ __pycache__
 *.pyo
 *.pyd
 .Python
-env
+env/
+venv/
 pip-log.txt
 pip-delete-this-directory.txt
 .tox
@@ -39,3 +40,4 @@ uploads/*
 results.json
 sample_input.txt
 test_algorithm.py
+README.md
