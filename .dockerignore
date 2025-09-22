@@ -37,4 +37,5 @@ Thumbs.db
 # Project specific
 uploads/*
 results.json
-*.txt
+sample_input.txt
+test_algorithm.py
