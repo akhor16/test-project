@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Algorithm Processor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .upload-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 2px dashed #ddd;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .upload-section.dragover {
+            border-color: #007bff;
+            background-color: #f8f9fa;
+        }
+        input[type="file"] {
+            margin: 10px 0;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .results {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+        }
+        .result-item {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: white;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        .input-data {
+            color: #666;
+            font-style: italic;
+        }
+        .output-data {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .llm-response {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #e3f2fd;
+            border-radius: 5px;
+            border-left: 4px solid #2196f3;
+        }
+        .error {
+            color: #dc3545;
+            background-color: #f8d7da;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .success {
+            color: #155724;
+            background-color: #d4edda;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .history-section {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 10px;
+        }
+        .history-item {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: white;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Algorithm Processor</h1>
+        
+        <div class="upload-section" id="uploadSection">
+            <h3>Upload TXT File</h3>
+            <p>Upload a text file containing lists in the format [a,b,c]</p>
+            <input type="file" id="fileInput" accept=".txt">
+            <br>
+            <button onclick="uploadFile()" id="uploadBtn">Process File</button>
+        </div>
+
+        <div id="results" style="display: none;">
+            <h3>Processing Results</h3>
+            <div id="resultsContent"></div>
+            <button onclick="callLLM()" id="llmBtn" style="display: none;">Send to LLM for Sorting</button>
+        </div>
+
+        <div id="llmResponse" style="display: none;">
+            <h3>LLM Response</h3>
+            <div id="llmContent"></div>
+        </div>
+
+        <div class="history-section">
+            <h3>Recent Results (Stored on Disk)</h3>
+            <button onclick="loadHistory()">Refresh History</button>
+            <div id="historyContent"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentResults = [];
+
+        function uploadFile() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('Please select a file first');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const uploadBtn = document.getElementById('uploadBtn');
+            uploadBtn.disabled = true;
+            uploadBtn.textContent = 'Processing...';
+
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    currentResults = data.results;
+                    displayResults(data.results);
+                    document.getElementById('llmBtn').style.display = 'inline-block';
+                    showMessage('File processed successfully!', 'success');
+                } else {
+                    showMessage('Error: ' + data.error, 'error');
+                }
+            })
+            .catch(error => {
+                showMessage('Error uploading file: ' + error, 'error');
+            })
+            .finally(() => {
+                uploadBtn.disabled = false;
+                uploadBtn.textContent = 'Process File';
+            });
+        }
+
+        function displayResults(results) {
+            const resultsDiv = document.getElementById('results');
+            const contentDiv = document.getElementById('resultsContent');
+            
+            contentDiv.innerHTML = '';
+            
+            results.forEach(result => {
+                const resultItem = document.createElement('div');
+                resultItem.className = 'result-item';
+                resultItem.innerHTML = `
+                    <div class="input-data">Input: [${result.input.join(', ')}]</div>
+                    <div class="output-data">Output: [${result.output.join(', ')}]</div>
+                `;
+                contentDiv.appendChild(resultItem);
+            });
+            
+            resultsDiv.style.display = 'block';
+        }
+
+        function callLLM() {
+            const llmBtn = document.getElementById('llmBtn');
+            llmBtn.disabled = true;
+            llmBtn.textContent = 'Calling LLM...';
+
+            fetch('/llm', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    displayLLMResponse(data.llm_response, data.original_data);
+                    showMessage('LLM response received!', 'success');
+                    loadHistory(); // Refresh history to show LLM response
+                } else {
+                    showMessage('Error calling LLM: ' + data.error, 'error');
+                }
+            })
+            .catch(error => {
+                showMessage('Error calling LLM: ' + error, 'error');
+            })
+            .finally(() => {
+                llmBtn.disabled = false;
+                llmBtn.textContent = 'Send to LLM for Sorting';
+            });
+        }
+
+        function displayLLMResponse(response, originalData) {
+            const llmDiv = document.getElementById('llmResponse');
+            const contentDiv = document.getElementById('llmContent');
+            
+            contentDiv.innerHTML = `
+                <div class="llm-response">
+                    <strong>Original Data:</strong> [${originalData.join(', ')}]<br>
+                    <strong>LLM Sorted Result:</strong> ${response}
+                </div>
+            `;
+            
+            llmDiv.style.display = 'block';
+        }
+
+        function loadHistory() {
+            fetch('/history')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    displayHistory(data.results);
+                } else {
+                    showMessage('Error loading history: ' + data.error, 'error');
+                }
+            })
+            .catch(error => {
+                showMessage('Error loading history: ' + error, 'error');
+            });
+        }
+
+        function displayHistory(results) {
+            const contentDiv = document.getElementById('historyContent');
+            
+            if (results.length === 0) {
+                contentDiv.innerHTML = '<p>No results stored yet.</p>';
+                return;
+            }
+            
+            contentDiv.innerHTML = '';
+            
+            results.slice(-5).reverse().forEach(result => {
+                const historyItem = document.createElement('div');
+                historyItem.className = 'history-item';
+                
+                let llmSection = '';
+                if (result.llm_response) {
+                    llmSection = `
+                        <div style="margin-top: 10px; padding: 8px; background-color: #e3f2fd; border-radius: 3px;">
+                            <strong>LLM Response:</strong> ${result.llm_response}
+                        </div>
+                    `;
+                }
+                
+                historyItem.innerHTML = `
+                    <div><strong>Input:</strong> [${result.input.join(', ')}]</div>
+                    <div><strong>Output:</strong> [${result.output.join(', ')}]</div>
+                    <div style="font-size: 12px; color: #666;">${new Date(result.timestamp).toLocaleString()}</div>
+                    ${llmSection}
+                `;
+                contentDiv.appendChild(historyItem);
+            });
+        }
+
+        function showMessage(message, type) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = type;
+            messageDiv.textContent = message;
+            
+            const container = document.querySelector('.container');
+            container.insertBefore(messageDiv, container.firstChild);
+            
+            setTimeout(() => {
+                messageDiv.remove();
+            }, 5000);
+        }
+
+        // Load history on page load
+        window.onload = function() {
+            loadHistory();
+        };
+
+        // Drag and drop functionality
+        const uploadSection = document.getElementById('uploadSection');
+        
+        uploadSection.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            uploadSection.classList.add('dragover');
+        });
+        
+        uploadSection.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            uploadSection.classList.remove('dragover');
+        });
+        
+        uploadSection.addEventListener('drop', function(e) {
+            e.preventDefault();
+            uploadSection.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                document.getElementById('fileInput').files = files;
+            }
+        });
+    </script>
+</body>
+</html>

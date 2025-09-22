@@ -1,0 +1,7 @@
+[a]
+[a,a]
+[a,b]
+[a,a,b,b]
+[a,b,b,a]
+[a,a,z,z,z,a,a]
+[r,r,r,a,a,g,g,g,r,r,r]
